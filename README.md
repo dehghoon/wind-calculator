@@ -2,57 +2,95 @@
 
 Engineering wind-load application for the approved `WIND-DUAL-001` calculation specification covering NBC 2010 and NBC 2020 routes.
 
-## Current Status
+## Architecture
 
-Phase 1 establishes the repository and API boundary around the approved Agent #2 calculation engine. The engineering engine is stored unchanged under `packages/wind-calculation-engine`.
+```text
+Approved Agent #2 Engine
+        |
+        v
+FastAPI Adapter
+        |
+        +--> Next.js Web Client
+        +--> Future Mobile Client
+        +--> Report Service
+```
 
-Implemented API routes expose only calculations already present in the approved engine. Missing edition-specific datasets and unresolved source references fail explicitly instead of being guessed.
+Engineering formulas, validation, units, warnings, and applicability remain in `packages/wind-calculation-engine`. The web client consumes the FastAPI contract and does not reproduce engineering calculations.
 
 ## Repository Structure
 
 ```text
-backend/                         FastAPI adapter and API tests
-packages/wind-calculation-engine/  Approved Agent #2 Python engine
-docs/                            Architecture and implementation notes
+backend/                               FastAPI adapter and API tests
+packages/wind-calculation-engine/      Approved Agent #2 Python engine and inherited tests
+web/                                   Responsive Next.js client
+docs/                                  Architecture notes
 ```
 
-## Engineering Boundaries
+## Implemented Routes
 
-- Engineering formulas, validation, warnings, units, and applicability remain owned by the Agent #2 package.
-- The API does not recreate formulas.
-- NBC editions remain isolated.
-- NBC 2010 General Static `Cg` selection remains unavailable until the approved edition-specific dataset is supplied.
-- Components and Cladding logic is not generalized beyond explicitly extracted configurations.
-- `Ch` remains a project engineering parameter until its exact source basis is verified.
+- `WIND-LR` — Low-Rise applicability
+- `WIND-GS` — General Static pressure coefficients
+- `WIND-CC` — Components & Cladding area lookup
+
+Unsupported or unresolved engineering rules fail explicitly instead of being estimated.
 
 ## Run API
 
 ```bash
 export PYTHONPATH="$(pwd)/packages/wind-calculation-engine/src"
 python -m pip install -r backend/requirements.txt
+export API_ALLOWED_ORIGINS="http://localhost:3000"
 cd backend
 uvicorn app.main:app --reload
 ```
 
+## Run Web
+
+```bash
+cd web
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+The API base URL is configured through `NEXT_PUBLIC_API_BASE_URL`.
+
 ## Tests
 
-Run inherited engineering tests unchanged:
+Inherited engineering tests:
 
 ```bash
 PYTHONPATH=packages/wind-calculation-engine/src python -m pytest packages/wind-calculation-engine/tests -q
 ```
 
-Run API adapter tests:
+API adapter tests:
 
 ```bash
 PYTHONPATH=packages/wind-calculation-engine/src:backend python -m pytest backend/tests -q
 ```
 
-## Next Implementation Layers
+Web quality gates:
 
-1. Complete typed calculation contracts around approved route datasets.
-2. Add report-content assembly matching the approved Report Specification.
-3. Integrate approved LinkoTech authentication and server-side report entitlement when the auth contract is available.
-4. Add the responsive React/Next.js client consuming only the FastAPI contract.
-5. Add application-generated wind/zone schematics without embedding engineering calculations in visualization code.
-6. Add portable deployment configuration and CI.
+```bash
+cd web
+npm install
+npm run type-check
+npm run build
+```
+
+See `TEST_RESULTS.md` for the latest verified status.
+
+## Engineering Boundaries
+
+- NBC 2010 exact clause/table/figure references remain externally unverified.
+- NBC 2010 General Static `Cg` selection remains unavailable until an approved edition-specific dataset is supplied.
+- Components & Cladding roof logic must not be generalized beyond explicitly extracted configurations.
+- `Ch` remains a project engineering parameter until its exact source basis is verified.
+
+## Next Layers
+
+1. Add report-content assembly matching the approved Report Specification.
+2. Integrate approved LinkoTech authentication and server-side report entitlement when the auth contract is available.
+3. Add report preview and premium official PDF generation.
+4. Add application-generated wind/zone schematics without embedding engineering calculations in visualization code.
+5. Add portable deployment configuration and CI when repository workflow permissions allow it.

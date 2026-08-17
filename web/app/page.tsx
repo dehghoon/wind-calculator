@@ -185,7 +185,7 @@ export default function HomePage() {
         }
 
         const pressure = await apiRequest<{ pressure: number; unit: string }>(
-          "/ipi/v1/calculations/low-rise/external-pressure",
+          "/api/v1/calculations/low-rise/external-pressure",
           {
             method: "POST",
             body: JSON.stringify({
@@ -285,7 +285,7 @@ export default function HomePage() {
               {route === "WIND-LR" && (
                 <>
                   <Field label="Plan dimension B" name="planB" value={planB} onChange={setPlanB} unit="m" min={0.01} />
-                  <Field label="Plan dimension W" name="planW" value={planT} onChange={setPlanW} unit="m" min={0.01} />
+                  <Field label="Plan dimension W" name="planW" value={planW} onChange={setPlanW} unit="m" min={0.01} />
                   <Field label="Roof slope" name="roofSlope" value={roofSlope} onChange={setRoofSlope} unit="deg" min={0} max={90} />
 
                   <div className="input-section">

@@ -179,7 +179,7 @@ export function WindCalculator() {
       cgcp: lookup.cgcp,
       loadCase,
       surface,
-      pressure: pressure.pressure,
+      pressure: presssure.pressure,
     });
   }
 
@@ -327,7 +327,7 @@ export function WindCalculator() {
                     unit="m"
                     min={0.01}
                   />
-                </>
+              </>
               )}
 
               {route === "WIND-LR" && (
@@ -343,7 +343,7 @@ export function WindCalculator() {
                   <Field
                     label="Plan dimension W"
                     name="planW"
-                    value={planT}
+                    value={planW}
                     onChange={setPlanW}
                     unit="m"
                     min={0.01}
@@ -357,7 +357,7 @@ export function WindCalculator() {
                     min={0}
                     max={60}
                   />
-                </>
+              </>
               )}
 
               {route !== "WIND-CC" && (
@@ -419,7 +419,7 @@ export function WindCalculator() {
                     "Surface",
                     surface,
                     setSurface,
-                    lowRiseSurfaces.map((item) => [item, `Surface ${item}`]),
+                    lowRiseSurfaces.map((item) => [item, `Surface ${item}`] as const),
                   )}
                   <Field
                     label="Height factor Ch"
@@ -473,7 +473,7 @@ export function WindCalculator() {
                       "C&C zone",
                       ccZone,
                       setCcZone,
-                      ccZones.map((item) => [item, item]),
+                      ccZones.map((item) => [item, item] as const),
                     )}
                   <Field
                     label="Tributary area"

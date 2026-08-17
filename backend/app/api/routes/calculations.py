@@ -15,6 +15,8 @@ from wind_calculations.calculations.general_static import (
 )
 from wind_calculations.calculations.low_rise import (
     calculate_low_rise_external_pressure,
+    calculate_open_terrain_exposure_factor,
+    calculate_rough_terrain_exposure_factor,
     is_low_rise_applicable,
 )
 from wind_calculations.exceptions import (
@@ -26,9 +28,14 @@ from app.schemas.calculations import (
     AreaLookupRequest,
     AreaLookupResponse,
     BuildingGeometryRequest,
+    ExposureFactorRequest,
+    ExposureFactorResponse,
     GeneralStaticCpRequest,
     GeneralStaticCpResponse,
     GeneralStaticPressureRequest,
+    GeneralStaticRunRequest,
+    GeneralStaticRunResponse,
+    GeneralStaticSurfaceResult,
     InterpolationRequest,
     InterpolationResponse,
     LowRiseApplicabilityResponse,
@@ -78,6 +85,23 @@ def low_rise_applicability(
         height_to_minimum_plan_dimension_ratio=(
             result.height_to_minimum_plan_dimension_ratio
         ),
+    )
+
+
+@router.post("/exposure-factor", response_model=ExposureFactorResponse)
+def exposure_factor(request: ExposureFactorRequest) -> ExposureFactorResponse:
+    try:
+        if request.terrain == "open":
+            value = calculate_open_terrain_exposure_factor(request.reference_height)
+        else:
+            value = calculate_rough_terrain_exposure_factor(request.reference_height)
+    except EngineeringInputError as exc:
+        raise _translate_engine_error(exc) from exc
+
+    return ExposureFactorResponse(
+        exposure_factor=value,
+        terrain=request.terrain,
+        reference_height=request.reference_height,
     )
 
 
@@ -133,7 +157,57 @@ def general_static_pressure(
     return PressureResponse(pressure=pressure)
 
 
-@router.post("/components-cladding/area-lookup", response_model=AreaLookupResponse)
+@router.post("/general-static/run", response_model=GeneralStaticRunResponse)
+def general_static_run(request: GeneralStaticRunRequest) -> GeneralStaticRunResponse:
+    try:
+        if request.terrain == "open":
+            ce = calculate_open_terrain_exposure_factor(request.height)
+        else:
+            ce = calculate_rough_terrain_exposure_factor(request.height)
+
+        cg = select_general_static_gust_effect_factor(
+            request.code_edition,
+            request.pressure_application,
+        )
+
+        cp_values = {
+            "windward": calculate_windward_cp(
+                request.height, request.wind_parallel_dimension
+            ),
+            "leeward": calculate_leeward_cp(
+                request.height, request.wind_parallel_dimension
+            ),
+            "parallel_wall": calculate_parallel_wall_cp(),
+            "roof": calculate_roof_cp(
+                request.height, request.wind_parallel_dimension
+            ),
+        }
+
+        surfaces = {}
+        for name, cp in cp_values.items():
+            pressure = calculate_general_static_pressure(
+                importance_factor=request.importance_factor,
+                reference_velocity_pressure=request.reference_velocity_pressure,
+                exposure_factor=ce,
+                topographic_factor=request.topographic_factor,
+                gust_effect_factor=cg,
+                pressure_coefficient=cp,
+            )
+            surfaces[name] = GeneralStaticSurfaceResult(cp=cp, pressure=pressure)
+
+        return GeneralStaticRunResponse(
+            exposure_factor=ce,
+            gust_effect_factor=cg,
+            **surfaces,
+        )
+    except (EngineeringInputError, UnsupportedEngineeringRuleError) as exc:
+        raise _translate_engine_error(exc) from exc
+
+
+@router.post(
+    "/components-cladding/area-lookup",
+    response_model=AreaLookupResponse,
+)
 def components_cladding_area_lookup(
     request: AreaLookupRequest,
 ) -> AreaLookupResponse:

@@ -179,7 +179,7 @@ export function WindCalculator() {
       cgcp: lookup.cgcp,
       loadCase,
       surface,
-      pressure: presssure.pressure,
+      pressure: pressure.pressure,
     });
   }
 

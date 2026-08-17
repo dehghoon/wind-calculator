@@ -14,9 +14,8 @@ def test_sheet1_exact_load_case_a_breakpoint() -> None:
 
 
 def test_sheet1_linear_slope_interpolation() -> None:
-    # Halfway between 20° (1.0) and 30° (1.05) for surface 1.
     assert lookup_low_rise_main_structural_cgcp(
-        load_case="A", roof_sope=25.0, surface="1"
+        load_case="A", roof_slope=25.0, surface="1"
     ) == pytest.approx(1.025)
 
 
@@ -36,6 +35,15 @@ def test_sheet2_positive_zone_difference_log_interpolation() -> None:
     assert lookup_low_slope_roof_components_cladding_cgcp(
         zone="+S", area=7.095337742966286
    ) == pytest.approx(0.33547205932774543)
+
+
+def test_sheet2_lookup_area_bounds_are_compatible() -> None:
+    assert lookup_low_slope_roof_components_cladding_cgcp(
+        zone="-C", area=0.2
+    ) == pytest.approx(-5.4)
+    assert lookup_low_slope_roof_components_cladding_cgcp(
+        zone="-C", area=250.0
+    ) == pytest.approx(-2.0)
 
 
 def test_sheet3a_internal_pressure_lookup() -> None:

@@ -7,16 +7,41 @@ import { ResultCard } from "../components/ResultCard";
 import { ApiError, apiRequest, getCapabilities } from "../lib/api";
 
 type Route = "WIND-LR" | "WIND-GS" | "WIND-CC";
-type Capabilities = { routes: string[]; code_editions: string[]; limitations: string[] };
-type LowRiseResult = {
+type Capabilities = {
+  routes: string[];
+  code_editions: string[];
+  limitations: string[];
+};
+
+type LowRiseApplicability = {
   applicable: boolean;
   height_limit_satisfied: boolean;
   aspect_ratio_limit_satisfied: boolean;
   minimum_plan_dimension: number;
   height_to_minimum_plan_dimension_ratio: number;
 };
-type GeneralStaticResult = { windward: number; leeward: number; parallel_wall: number; roof: number };
-type AreaLookupResult = { actual_area: number; lookup_area: number; maximum_table_area: number; unit: string };
+
+type LowRiseResult = {
+  applicability: LowRiseApplicability;
+  pressure?: {
+    pressure: number;
+    unit: string;
+  };
+};
+
+type GeneralStaticResult = {
+  windward: number;
+  leeward: number;
+  parallel_wall: number;
+  roof: number;
+};
+
+type AreaLookupResult = {
+  actual_area: number;
+  lookup_area: number;
+  maximum_table_area: number;
+  unit: string;
+};
 
 function number(value: string): number {
   return Number(value);
@@ -42,6 +67,14 @@ export default function HomePage() {
   const [planW, setPlanW] = useState("30");
   const [windDimension, setWindDimension] = useState("24");
   const [roofSlope, setRoofSlope] = useState("5");
+
+  const [codeEdition, setCodeEdition] = useState("NBC_2020");
+  const [importanceFactor, setImportanceFactor] = useState("1.0");
+  const [referenceVelocityPressure, setReferenceVelocityPressure] = useState("0.5");
+  const [exposureFactor, setExposureFactor] = useState("1.0");
+  const [gustPressureCoefficient, setGustPressureCoefficient] = useState("-1.2");
+  const [heightFactor, setHeightFactor] = useState("1.0");
+
   const [componentArea, setComponentArea] = useState("2");
   const [maximumTableArea, setMaximumTableArea] = useState("50");
 
@@ -61,16 +94,34 @@ export default function HomePage() {
 
     if (route === "WIND-LR") {
       const value = result as LowRiseResult;
+      const applicability = value.applicability;
       return (
         <div className="results-grid">
-          <ResultCard title="Applicability" value={value.applicable ? "Applicable" : "Not applicable"} detail="WIND-LR" />
-          <ResultCard title="Height limit" value={value.height_limit_satisfied ? "Satisfied" : "Not satisfied"} />
-          <ResultCard title="Aspect ratio" value={value.aspect_ratio_limit_satisfied ? "Satisfied" : "Not satisfied"} />
+          <ResultCard
+            title="Applicability"
+            value={applicability.applicable ? "Applicable" : "Not applicable"}
+            detail="WIND-LR"
+          />
+          <ResultCard
+            title="Height limit"
+            value={applicability.height_limit_satisfied ? "Satisfied" : "Not satisfied"}
+          />
+          <ResultCard
+            title="Aspect ratio"
+            value={applicability.aspect_ratio_limit_satisfied ? "Satisfied" : "Not satisfied"}
+          />
           <ResultCard
             title="H / Bmin"
-            value={value.height_to_minimum_plan_dimension_ratio.toFixed(3)}
-            detail={`Bmin = ${value.minimum_plan_dimension.toFixed(2)} m`}
+            value={applicability.height_to_minimum_plan_dimension_ratio.toFixed(3)}
+            detail={`Bmin = ${applicability.minimum_plan_dimension.toFixed(2)} m`}
           />
+          {value.pressure ? (
+            <ResultCard
+              title="External wind pressure"
+              value={`${value.pressure.pressure.toFixed(3)} ${value.pressure.unit}`}
+              detail="Approved Agent #2 engine output"
+            />
+          ) : null}
         </div>
       );
     }
@@ -90,9 +141,18 @@ export default function HomePage() {
     const value = result as AreaLookupResult;
     return (
       <div className="results-grid">
-        <ResultCard title="Actual component area" value={`${value.actual_area.toFixed(2)} ${value.unit}`} />
-        <ResultCard title="Lookup area" value={`${value.lookup_area.toFixed(2)} ${value.unit}`} />
-        <ResultCard title="Maximum table area" value={`${value.maximum_table_area.toFixed(2)} ${value.unit}`} />
+        <ResultCard
+          title="Actual component area"
+          value={`${value.actual_area.toFixed(2)} ${value.unit}`}
+        />
+        <ResultCard
+          title="Lookup area"
+          value={`${value.lookup_area.toFixed(2)} ${value.unit}`}
+        />
+        <ResultCard
+          title="Maximum table area"
+          value={`${value.maximum_table_area.toFixed(2)} ${value.unit}`}
+        />
       </div>
     );
   }, [result, route]);
@@ -105,8 +165,9 @@ export default function HomePage() {
 
     try {
       if (route === "WIND-LR") {
-        setResult(
-          await apiRequest<LowRiseResult>("/api/v1/calculations/low-rise/applicability", {
+        const applicability = await apiRequest<LowRiseApplicability>(
+          "/api/v1/calculations/low-rise/applicability",
+          {
             method: "POST",
             body: JSON.stringify({
               height: number(height),
@@ -115,27 +176,55 @@ export default function HomePage() {
               wind_parallel_dimension: number(windDimension),
               roof_slope: number(roofSlope),
             }),
-          }),
+          },
         );
-      } else if (route === "WIND-GS") {
-        setResult(
-          await apiRequest<GeneralStaticResult>("/api/v1/calculations/general-static/cp", {
+
+        if (!applicability.applicable) {
+          setResult({ applicability } satisfies LowRiseResult);
+          return;
+        }
+
+        const pressure = await apiRequest<{ pressure: number; unit: string }>(
+          "/ipi/v1/calculations/low-rise/external-pressure",
+          {
             method: "POST",
             body: JSON.stringify({
-              height: number(height),
-              wind_parallel_dimension: number(windDimension),
+              code_edition: codeEdition,
+              importance_factor: number(importanceFactor),
+              reference_velocity_pressure: number(referenceVelocityPressure),
+              exposure_factor: number(exposureFactor),
+              gust_pressure_coefficient: number(gustPressureCoefficient),
+              height_factor: number(heightFactor),
             }),
-          }),
+          },
+        );
+
+        setResult({ applicability, pressure } satisfies LowRiseResult);
+      } else if (route === "WIND-GS") {
+        setResult(
+          await apiRequest<GeneralStaticResult>(
+            "/api/v1/calculations/general-static/cp",
+            {
+              method: "POST",
+              body: JSON.stringify({
+                height: number(height),
+                wind_parallel_dimension: number(windDimension),
+              }),
+            },
+          ),
         );
       } else {
         setResult(
-          await apiRequest<AreaLookupResult>("/api/v1/calculations/components-cladding/area-lookup", {
-            method: "POST",
-            body: JSON.stringify({
-              actual_area: number(componentArea),
-              maximum_table_area: number(maximumTableArea),
-            }),
-          }),
+          await apiRequest<AreaLookupResult>(
+            "/api/v1/calculations/components-cladding/area-lookup",
+            {
+              method: "POST",
+              body: JSON.stringify({
+                actual_area: number(componentArea),
+                maximum_table_area: number(maximumTableArea),
+              }),
+            },
+          ),
         );
       }
     } catch (err) {
@@ -179,7 +268,7 @@ export default function HomePage() {
             <span className="eyebrow">Engineering inputs</span>
             <h2>
               {route === "WIND-LR"
-                ? "Low-Rise Applicability"
+                ? "Low-Rise Wind Pressure"
                 : route === "WIND-GS"
                   ? "General Static Pressure Coefficients"
                   : "Components & Cladding Area Lookup"}
@@ -196,8 +285,41 @@ export default function HomePage() {
               {route === "WIND-LR" && (
                 <>
                   <Field label="Plan dimension B" name="planB" value={planB} onChange={setPlanB} unit="m" min={0.01} />
-                  <Field label="Plan dimension W" name="planW" value={planW} onChange={setPlanW} unit="m" min={0.01} />
+                  <Field label="Plan dimension W" name="planW" value={planT} onChange={setPlanW} unit="m" min={0.01} />
                   <Field label="Roof slope" name="roofSlope" value={roofSlope} onChange={setRoofSlope} unit="deg" min={0} max={90} />
+
+                  <div className="input-section">
+                    <span className="eyebrow">Pressure parameters</span>
+                    <p className="section-help">
+                      These values are passed directly to the approved Agent #2 pressure endpoint.
+                    </p>
+                  </div>
+
+                  <label className="field" htmlFor="codeEdition">
+                    <span className="field-label">Code edition</span>
+                    <span className="field-control">
+                      <select
+                        id="codeEdition"
+                        name="codeEdition"
+                        value={codeEdition}
+                        onChange={(event) => setCodeEdition(event.target.value)}
+                      >
+                        <option value="NBC_2020">NBC 2020</option>
+                        <option value="NBC_2010">NBC 2010</option>
+                      </select>
+                    </span>
+                  </label>
+
+                  <Field label="Importance factor Iw" name="importanceFactor" value={importanceFactor} onChange={setImportanceFactor} min={0.01} step={0.01} />
+                  <Field label="Reference velocity pressure q" name="referenceVelocityPressure" value={referenceVelocityPressure} onChange={setReferenceVelocityPressure} unit="kPa" min={0.001} step={0.001} />
+                  <Field label="Exposure factor Ce" name="exposureFactor" value={exposureFactor} onChange={setExposureFactor} min={0.001} step={0.001} />
+                  <Field label="Gust pressure coefficient CgCp" name="gustPressureCoefficient" value={gustPressureCoefficient} onChange={setGustPressureCoefficient} step={0.01} />
+                  <Field label="Height factor Ch" name="heightFactor" value={heightFactor} onChange={setHeightFactor} min={0.001} step={0.001} />
+
+                  <EngineeringNotice
+                    title="Engineering data boundary"
+                    message="CgCp and Ch are not inferred by the web client. Enter only values supported by the approved project/code source. The backend preserves the Agent #2 engineering rules."
+                  />
                 </>
               )}
 
@@ -209,7 +331,7 @@ export default function HomePage() {
               )}
 
               <button className="primary-button" type="submit" disabled={loading}>
-                {loading ? "Calculating…" : "Run calculation"}
+                {loading ? "Calculating…" : route === "WIND-LR" ? "Run pressure calculation" : "Run calculation"}
               </button>
             </form>
           </section>

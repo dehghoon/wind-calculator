@@ -1,8 +1,11 @@
+import os
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.calculations import router as calculations_router
 
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.2.0"
 ENGINE_SPECIFICATION_ID = "WIND-DUAL-001"
 
 app = FastAPI(
@@ -13,6 +16,20 @@ app = FastAPI(
         "Engineering formulas remain in the standalone Agent #2 package."
     ),
 )
+
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("API_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+if allowed_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization"],
+    )
 
 app.include_router(calculations_router)
 

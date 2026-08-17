@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from wind_calculations.enums import CodeEdition, PressureApplication
@@ -23,6 +25,18 @@ class LowRiseApplicabilityResponse(StrictModel):
     height_to_minimum_plan_dimension_ratio: float
     unit_system: str = "SI"
     route: str = "WIND-LR"
+
+
+class ExposureFactorRequest(StrictModel):
+    terrain: Literal["open", "rough"]
+    reference_height: float = Field(gt=0)
+
+
+class ExposureFactorResponse(StrictModel):
+    exposure_factor: float
+    terrain: Literal["open", "rough"]
+    reference_height: float
+    unit: str = "dimensionless"
 
 
 class LowRisePressureRequest(StrictModel):
@@ -56,6 +70,33 @@ class GeneralStaticPressureRequest(StrictModel):
     topographic_factor: float = Field(gt=0)
     pressure_application: PressureApplication
     pressure_coefficient: float
+
+
+class GeneralStaticRunRequest(StrictModel):
+    code_edition: CodeEdition
+    height: float = Field(gt=0)
+    wind_parallel_dimension: float = Field(gt=0)
+    terrain: Literal["open", "rough"]
+    importance_factor: float = Field(gt=0)
+    reference_velocity_pressure: float = Field(gt=0)
+    topographic_factor: float = Field(gt=0)
+    pressure_application: PressureApplication
+
+
+class GeneralStaticSurfaceResult(StrictModel):
+    cp: float
+    pressure: float
+    unit: str = "kPa"
+
+
+class GeneralStaticRunResponse(StrictModel):
+    exposure_factor: float
+    gust_effect_factor: float
+    windward: GeneralStaticSurfaceResult
+    leeward: GeneralStaticSurfaceResult
+    parallel_wall: GeneralStaticSurfaceResult
+    roof: GeneralStaticSurfaceResult
+    route: str = "WIND-GS"
 
 
 class PressureResponse(StrictModel):

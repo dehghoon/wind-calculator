@@ -1,40 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "services": {
+  "experimentalServices": {
     "web": {
-      "root": "web/",
-      "framework": "nextjs"
+      "entrypoint": "web",
+      "routePrefix": "/"
     },
     "api": {
-      "root": "backend/",
-      "framework": "fastapi",
-      "entrypoint": "index.py"
+      "entrypoint": "backend/index.py",
+      "routePrefix": "/api"
     }
-  },
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": {
-        "service": "api"
-      }
-    },
-    {
-      "source": "/health",
-      "destination": {
-        "service": "api"
-      }
-    },
-    {
-      "source": "/version",
-      "destination": {
-        "service": "api"
-      }
-    },
-    {
-      "source": "/:path*",
-      "destination": {
-        "service": "web"
-      }
-    }
-  ]
+  }
 }

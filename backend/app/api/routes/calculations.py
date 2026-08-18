@@ -12,6 +12,7 @@ from wind_calculations.calculations.general_static import (
     calculate_roof_cp,
     calculate_windward_cp,
     select_general_static_gust_effect_factor,
+    select_general_static_topographic_factor,
 )
 from wind_calculations.calculations.low_rise import (
     calculate_low_rise_external_pressure,
@@ -144,11 +145,15 @@ def general_static_pressure(
             request.code_edition,
             request.pressure_application,
         )
+        effective_ct = select_general_static_topographic_factor(
+            request.code_edition,
+            request.topographic_factor,
+        )
         pressure = calculate_general_static_pressure(
             importance_factor=request.importance_factor,
             reference_velocity_pressure=request.reference_velocity_pressure,
             exposure_factor=request.exposure_factor,
-            topographic_factor=request.topographic_factor,
+            topographic_factor=effective_ct,
             gust_effect_factor=gust_effect_factor,
             pressure_coefficient=request.pressure_coefficient,
         )
@@ -168,6 +173,10 @@ def general_static_run(request: GeneralStaticRunRequest) -> GeneralStaticRunResp
         cg = select_general_static_gust_effect_factor(
             request.code_edition,
             request.pressure_application,
+        )
+        effective_ct = select_general_static_topographic_factor(
+            request.code_edition,
+            request.topographic_factor,
         )
 
         cp_values = {
@@ -189,7 +198,7 @@ def general_static_run(request: GeneralStaticRunRequest) -> GeneralStaticRunResp
                 importance_factor=request.importance_factor,
                 reference_velocity_pressure=request.reference_velocity_pressure,
                 exposure_factor=ce,
-                topographic_factor=request.topographic_factor,
+                topographic_factor=effective_ct,
                 gust_effect_factor=cg,
                 pressure_coefficient=cp,
             )

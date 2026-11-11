@@ -3,6 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.routes.asce7_experimental import router as asce7_experimental_router
 from app.api.routes.calculations import router as calculations_router
 from app.api.routes.lookups import router as lookups_router
 
@@ -33,6 +34,7 @@ if allowed_origins:
     )
 
 app.include_router(calculations_router)
+app.include_router(asce7_experimental_router)
 app.include_router(lookups_router)
 
 

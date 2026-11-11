@@ -10,6 +10,9 @@ engine as licensed for commercial reuse without written authorization.
 ## Current implemented scope
 - Isolated Python pressure arithmetic using explicitly supplied, externally
   verified q, G, Cp, and GCpi, with sign convention and input validation.
+- Added independent velocity-pressure arithmetic (US psf), Kd-aware directional
+  surface pressure assembly, ±GCpi cases for +X/-X/+Y/-Y, and regression tests.
+  No automatic Cp, Kz, wind-speed map, or geometry selection exists yet.
 - Unit tests of arithmetic and invalid inputs. These are **not** engineering
   validation tests.
 - No API or UI exposure, no production feature flag, no certified output.

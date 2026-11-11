@@ -15,7 +15,9 @@ engine as licensed for commercial reuse without written authorization.
   No automatic Cp, Kz, wind-speed map, or geometry selection exists yet.
 - Unit tests of arithmetic and invalid inputs. These are **not** engineering
   validation tests.
-- No API or UI exposure, no production feature flag, no certified output.
+- Experimental API is mounted at `POST /api/v1/asce7-22/experimental/directional`, but returns 404 unless `ASCE7_EXPERIMENTAL_ENABLED=true`; no UI or certified output. Do not enable in production.
+- API takes all coefficients from the caller; there is no code-prescribed coefficient selection or design applicability determination.
+- The velocity-pressure helper intentionally omits Kd and the directional assembly applies Kd exactly once to both external and internal terms; this is algebraically equivalent to including Kd in both velocity pressures for this limited arithmetic use. It must not be combined with q values that already include Kd.
 
 ## Required before an operational Linkoteq ASCE 7-22 tool
 1. Obtain permission and source access for the MIDAS engine, or implement an

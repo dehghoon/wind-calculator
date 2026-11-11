@@ -12,6 +12,9 @@ export type LowRiseResult = {
     height_to_minimum_plan_dimension_ratio: number;
   };
   exposureFactor?: number;
+  cgcp?: number;
+  loadCase?: "A" | "B";
+  surface?: string;
   pressure?: number;
 };
 
@@ -47,6 +50,7 @@ export function WindResults({ result, terrain }: { result: CalculationResult; te
         <ResultCard title="Aspect ratio" value={a.aspect_ratio_limit_satisfied ? "Satisfied" : "Not satisfied"} />
         <ResultCard title="H / Bmin" value={a.height_to_minimum_plan_dimension_ratio.toFixed(3)} detail={`Bmin = ${a.minimum_plan_dimension.toFixed(2)} m`} />
         {result.exposureFactor !== undefined && <ResultCard title="Exposure factor Ce" value={result.exposureFactor.toFixed(3)} detail={`${terrain} terrain`} />}
+        {result.cgcp !== undefined && <ResultCard title="Gust pressure coefficient CgCp" value={result.cgcp.toFixed(3)} detail={`Load case ${result.loadCase ?? "—"} · Surface ${result.surface ?? "—"}`} />}
         {result.pressure !== undefined && <ResultCard title="External wind pressure" value={`${result.pressure.toFixed(3)} kPa`} detail="Approved Agent #2 engine output" />}
       </div>
     );

@@ -7,17 +7,17 @@ from fastapi import APIRouter, HTTPException
 
 _CORE_URL = (
     "https://raw.githubusercontent.com/dehghoon/linkoteq-structural-core/"
-    "2e24a26ebccc84e66e98e8077861ac2a9c19b48a/"
-    "catalogs/climate/nbcc-2020/wind-pressure-first-printing.json"
+    "e642c8aa27e0b31ff05d4b0f31778edea3fe240d/"
+    "catalogs/climate/nbcc-2020/wind-pressure-second-printing.json"
 )
-_CORE_SHA256 = "30665ce9d521ab4979874825e75367ac94e0a36ca8cebd283b2c089b9bf7e05a"
+_CORE_SHA256 = "2dc931d33b3d2e3375ad7ed5a512cd6d1544f3e590621db49eee71d921b0004d"
 router = APIRouter(prefix="/api/v1/climate", tags=["climate"])
 
 
 @lru_cache(maxsize=1)
 def _core_catalog() -> dict:
     with urlopen(_CORE_URL, timeout=8) as response:
-        data = response.read(100_000)
+        data = response.read(250_000)
     if hashlib.sha256(data).hexdigest() != _CORE_SHA256:
         raise ValueError("Wind climate catalog checksum mismatch")
     return json.loads(data)

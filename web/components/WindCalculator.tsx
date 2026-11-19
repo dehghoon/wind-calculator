@@ -40,7 +40,7 @@ type PressureResponse = {
 
 type WindClimate = {
   source: { printing: number; reference: string };
-  records: { id: string; location: string; provinceOrTerritory: string; q50KPa: number }[];
+  records: { id: string; location: string; provinceOrTerritory: string; q10KPa: number; q50KPa: number }[];
 };
 
 type GeneralStaticRunResponse = GeneralStaticResult["data"];
@@ -109,6 +109,10 @@ export function WindCalculator() {
   const [windClimate, setWindClimate] = useState<WindClimate | null>(null);
   const [climateError, setClimateError] = useState(false);
   const [station, setStation] = useState("");
+  const [province, setProvince] = useState("");
+  const stations = windClimate?.records ?? [];
+  const provinces = Array.from(new Set(stations.map(row => row.provinceOrTerritory)));
+  const selectedStation = stations.find(row => row.id === station);
   useEffect(() => {
     const controller = new AbortController();
     apiRequest<WindClimate>("/api/v1/climate/nbc-2020/wind-pressure", { signal: controller.signal })
@@ -411,17 +415,36 @@ export function WindCalculator() {
                     min={0.01}
                     step={0.01}
                   />
-                  {codeEdition === "NBC_2020" && windClimate ? select(
-                    "windStation",
-                    "NBC 2020 wind station · first printing",
-                    station,
-                    id => {
-                      const selected = windClimate.records.find(row => row.id === id);
-                      setStation(id);
-                      setQ(selected ? String(selected.q50KPa) : "");
-                    },
-                    [["", "Enter project pressure manually"], ...windClimate.records.map(row =>
-                      [row.id, `${row.location}, ${row.provinceOrTerritory}`] as [string, string])],
+                  {codeEdition === "NBC_2020" && windClimate ? (
+                    <>
+                      {select(
+                        "windProvince",
+                        "Province or territory",
+                        province,
+                        value => {
+                          if (station) setQ("");
+                          setStation("");
+                          setProvince(value);
+                        },
+                        [["", "All provinces and territories"], ...provinces.map(name => [name, name] as const)],
+                      )}
+                      {select(
+                        "windStation",
+                        "NBC 2020 wind station · second printing",
+                        station,
+                        id => {
+                          const selected = stations.find(row => row.id === id);
+                          setStation(id);
+                          setQ(selected ? String(selected.q50KPa) : "");
+                        },
+                        [["", "Enter project pressure manually"], ...stations
+                          .filter(row => !province || row.provinceOrTerritory === province)
+                          .map(row => [row.id, `${row.location}, ${row.provinceOrTerritory}`] as const)],
+                      )}
+                      {selectedStation ? (
+                        <small>Table C-2 · 1 in 10 years: {selectedStation.q10KPa.toFixed(2)} kPa · 1 in 50 years: {selectedStation.q50KPa.toFixed(2)} kPa (used for calculation).</small>
+                      ) : null}
+                    </>
                   ) : null}
                   {codeEdition === "NBC_2020" && climateError ? <small>Core wind station lookup unavailable. Enter the project pressure manually.</small> : null}
                   <Field

@@ -52,7 +52,7 @@ def test_general_static_cp4_strict_boundary() -> None:
     assert response.json()["roof"] == -0.5
 
 
-def test_nbc2010_general_static_cg_is_not_invented() -> None:
+def test_nbc2010_general_static_pressure_matches_engine_benchmark() -> None:
     response = client.post(
         "/api/v1/calculations/general-static/pressure",
         json={
@@ -65,8 +65,8 @@ def test_nbc2010_general_static_cg_is_not_invented() -> None:
             "pressure_coefficient": 0.8,
         },
     )
-    assert response.status_code == 422
-    assert response.json()["detail"]["code"] == "UNSUPPORTED_ENGINEERING_RULE"
+    assert response.status_code == 200
+    assert response.json()["pressure"] == 0.8
 
 
 def test_component_area_clamp_retains_actual_area() -> None:

@@ -71,6 +71,8 @@ def components_cladding_cgcp(request: ComponentsCladdingLookupRequest) -> dict[s
         "zone": request.zone,
         "actual_area": request.area,
         "lookup_area": min(max(request.area, 1.0), 100.0),
+        "maximum_table_area": 100.0,
+        "unit": "m²",
         "source": "wind_loadf (1).xlsx - Sheet2",
     }
 

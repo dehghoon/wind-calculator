@@ -83,7 +83,7 @@ See `TEST_RESULTS.md` for the latest verified status.
 ## Engineering Boundaries
 
 - NBC 2010 exact clause/table/figure references remain externally unverified.
-- NBC 2010 General Static `Cg` selection remains unavailable until an approved edition-specific dataset is supplied.
+- The existing NBC 2010 engine implements the static gust factor for the supported pressure applications. Automatic model writeback remains outside the verified routes.
 - Components & Cladding roof logic must not be generalized beyond explicitly extracted configurations.
 - `Ch` remains a project engineering parameter until its exact source basis is verified.
 

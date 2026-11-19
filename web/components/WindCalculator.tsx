@@ -46,6 +46,8 @@ type ComponentsLookupResponse = {
   actual_area: number;
   lookup_area: number;
   source: string;
+  maximum_table_area: number;
+  unit: string;
 };
 
 const numberValue = (value: string) => Number(value);

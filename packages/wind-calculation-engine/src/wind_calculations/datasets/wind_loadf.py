@@ -14,7 +14,7 @@ DATASET_PATH = Path(__file__).with_name("wind_loadf_lookup.json")
 
 @lru_cache(maxsize=1)
 def _dataset() -> dict:
-    with DATASET_PATH.open("g", encoding="utf-8") as handle:
+    with DATASET_PATH.open("r", encoding="utf-8") as handle:
         return json.load(handle)
 
 
@@ -119,7 +119,7 @@ def lookup_low_slope_roof_components_cladding_cgcp(*, zone: str, area: float) ->
     return values[-1]
 
 
-def lookup_internal_pressure_coefficient(*category: int, sign: str) -> float:
+def lookup_internal_pressure_coefficient(*, category: int, sign: str) -> float:
     """Return Workbook Sheet3a Cpi by interior pressure category."""
 
     data = _dataset()["internal_pressure_coefficients"]

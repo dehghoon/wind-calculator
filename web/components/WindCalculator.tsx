@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { EngineeringNotice } from "./EngineeringNotice";
 import { Field } from "./Field";
 import { ApiError, apiRequest } from "../lib/api";
@@ -38,6 +38,11 @@ type PressureResponse = {
   unit: string;
 };
 
+type WindClimate = {
+  source: { printing: number; reference: string };
+  records: { id: string; location: string; provinceOrTerritory: string; q10KPa: number; q50KPa: number }[];
+};
+
 type GeneralStaticRunResponse = GeneralStaticResult["data"];
 
 type ComponentsLookupResponse = {
@@ -46,6 +51,8 @@ type ComponentsLookupResponse = {
   actual_area: number;
   lookup_area: number;
   source: string;
+  maximum_table_area: number;
+  unit: string;
 };
 
 const numberValue = (value: string) => Number(value);
@@ -98,7 +105,21 @@ export function WindCalculator() {
   const [terrain, setTerrain] = useState<Terrain>("open");
   const [codeEdition, setCodeEdition] = useState("NBC_2020");
   const [importanceFactor, setImportanceFactor] = useState("1.0");
-  const [q, setQ] = useState("0.5");
+  const [q, setQ] = useState("");
+  const [windClimate, setWindClimate] = useState<WindClimate | null>(null);
+  const [climateError, setClimateError] = useState(false);
+  const [station, setStation] = useState("");
+  const [province, setProvince] = useState("");
+  const stations = windClimate?.records ?? [];
+  const provinces = Array.from(new Set(stations.map(row => row.provinceOrTerritory)));
+  const selectedStation = stations.find(row => row.id === station);
+  useEffect(() => {
+    const controller = new AbortController();
+    apiRequest<WindClimate>("/api/v1/climate/nbc-2020/wind-pressure", { signal: controller.signal })
+      .then(result => { if (!controller.signal.aborted) setWindClimate(result); })
+      .catch(() => { if (!controller.signal.aborted) setClimateError(true); });
+    return () => controller.abort();
+  }, []);
   const [ct, setCt] = useState("1.0");
   const [application, setApplication] =
     useState<PressureApplication>("building_as_whole");
@@ -366,7 +387,11 @@ export function WindCalculator() {
                     "codeEdition",
                     "Code edition",
                     codeEdition,
-                    setCodeEdition,
+                    edition => {
+                      if (station) setQ("");
+                      setStation("");
+                      setCodeEdition(edition);
+                    },
                     [
                       ["NBC_2020", "NBC 2020"],
                       ["NBC_2010", "NBC 2010"],
@@ -390,11 +415,43 @@ export function WindCalculator() {
                     min={0.01}
                     step={0.01}
                   />
+                  {codeEdition === "NBC_2020" && windClimate ? (
+                    <>
+                      {select(
+                        "windProvince",
+                        "Province or territory",
+                        province,
+                        value => {
+                          if (station) setQ("");
+                          setStation("");
+                          setProvince(value);
+                        },
+                        [["", "All provinces and territories"], ...provinces.map(name => [name, name] as const)],
+                      )}
+                      {select(
+                        "windStation",
+                        "NBC 2020 wind station · second printing",
+                        station,
+                        id => {
+                          const selected = stations.find(row => row.id === id);
+                          setStation(id);
+                          setQ(selected ? String(selected.q50KPa) : "");
+                        },
+                        [["", "Enter project pressure manually"], ...stations
+                          .filter(row => !province || row.provinceOrTerritory === province)
+                          .map(row => [row.id, `${row.location}, ${row.provinceOrTerritory}`] as const)],
+                      )}
+                      {selectedStation ? (
+                        <small>Table C-2 · 1 in 10 years: {selectedStation.q10KPa.toFixed(2)} kPa · 1 in 50 years: {selectedStation.q50KPa.toFixed(2)} kPa (used for calculation).</small>
+                      ) : null}
+                    </>
+                  ) : null}
+                  {codeEdition === "NBC_2020" && climateError ? <small>Core wind station lookup unavailable. Enter the project pressure manually.</small> : null}
                   <Field
                     label="Reference velocity pressure q"
                     name="q"
                     value={q}
-                    onChange={setQ}
+                    onChange={value => { setStation(""); setQ(value); }}
                     unit="kPa"
                     min={0.001}
                     step={0.001}

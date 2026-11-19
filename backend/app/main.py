@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.calculations import router as calculations_router
 from app.api.routes.lookups import router as lookups_router
 
+from app.wind_climate import router as wind_climate_router
+
 APP_VERSION = "0.3.0"
 ENGINE_SPECIFICATION_ID = "WIND-DUAL-001"
 
@@ -34,6 +36,7 @@ if allowed_origins:
 
 app.include_router(calculations_router)
 app.include_router(lookups_router)
+app.include_router(wind_climate_router)
 
 
 @app.get("/health", tags=["system"])

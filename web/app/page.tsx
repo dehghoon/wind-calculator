@@ -1,9 +1,10 @@
+import ToolAccessGate from "../components/ToolAccessGate";
 import { WindCalculator } from "../components/WindCalculator";
 
 export default function HomePage() {
   return (
-    <main>
+    <ToolAccessGate><main>
       <WindCalculator />
-    </main>
+    </main></ToolAccessGate>
   );
 }

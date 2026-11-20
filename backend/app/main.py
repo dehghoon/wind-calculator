@@ -20,6 +20,9 @@ app = FastAPI(
      ),
 )
 
+from .tool_auth import protect_api
+app.middleware("http")(protect_api)
+
 allowed_origins = [
     origin.strip()
     for origin in os.getenv("API_ALLOWED_ORIGINS", "").split(",")

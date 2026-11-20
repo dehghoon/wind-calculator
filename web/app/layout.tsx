@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import type { Metadata } from "next";
 import "./globals.css";
+import "./linkoteq-theme.css";
 
 export const metadata: Metadata = {
   title: "Wind Load Calculator | Linkoteq",
@@ -11,7 +12,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" data-linkoteq-surface="wind">
       <head>
-        <link rel="stylesheet" href="https://www.linkoteq.com/design-system/linkoteq-shell-v1.css" />
         <script defer src="https://www.linkoteq.com/design-system/linkoteq-header-v1.js" />
       </head>
       <body>{createElement("linkoteq-header")}{children}</body>

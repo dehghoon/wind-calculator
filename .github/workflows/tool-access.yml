@@ -1,0 +1,23 @@
+name: Tool access and web checks
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install fastapi httpx pytest
+      - run: PYTHONPATH=backend:packages/wind-calculation-engine/src pytest backend/tests packages/wind-calculation-engine/tests -q
+      - run: npm ci --ignore-scripts
+        working-directory: web
+      - run: npm audit --omit=dev --audit-level=high
+        working-directory: web
+      - run: npx tsc --noEmit
+        working-directory: web
+      - run: npm run build
+        working-directory: web

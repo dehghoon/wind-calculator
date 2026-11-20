@@ -294,7 +294,7 @@ export function WindCalculator() {
     <>
       <header className="hero">
         <div className="hero-copy">
-          <span className="eyebrow">WIND-DUAL-001</span>
+          <span className="eyebrow">Wind loads · Beta</span>
           <h1>Wind Calculator</h1>
           <p>
             Engineering calculations and approved workbook lookups are
@@ -559,7 +559,7 @@ export function WindCalculator() {
           </section>
 
           <section className="panel results-panel">
-            <span className="eyebrow">Approved engine output</span>
+            <span className="eyebrow">Calculation results</span>
             <h2>Results</h2>
             {error && (
               <EngineeringNotice title="Calculation unavailable" message={error} />

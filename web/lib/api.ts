@@ -1,3 +1,4 @@
+import { toolAuthorization } from "./tool-session";
 export type ApiError = {
   status: number;
   code: string;
@@ -12,6 +13,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...toolAuthorization(),
       ...(init?.headers ?? {}),
     },
   });

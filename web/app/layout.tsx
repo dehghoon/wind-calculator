@@ -2,6 +2,7 @@ import { createElement } from "react";
 import type { Metadata } from "next";
 import "./globals.css";
 import "./linkoteq-theme.css";
+import "./snow-workspace.css";
 
 export const metadata: Metadata = {
   title: "Wind Load Calculator | Linkoteq",
@@ -18,3 +19,4 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     </html>
   );
 }
+

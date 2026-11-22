@@ -32,6 +32,9 @@ export type GeneralStaticResult = {
 
 export type ComponentsResult = {
   route: "WIND-CC";
+  cgcp: number;
+  zone: string;
+  source: string;
   actual_area: number;
   lookup_area: number;
   maximum_table_area: number;
@@ -51,7 +54,7 @@ export function WindResults({ result, terrain }: { result: CalculationResult; te
         <ResultCard title="H / Bmin" value={a.height_to_minimum_plan_dimension_ratio.toFixed(3)} detail={`Bmin = ${a.minimum_plan_dimension.toFixed(2)} m`} />
         {result.exposureFactor !== undefined && <ResultCard title="Exposure factor Ce" value={result.exposureFactor.toFixed(3)} detail={`${terrain} terrain`} />}
         {result.cgcp !== undefined && <ResultCard title="Gust pressure coefficient CgCp" value={result.cgcp.toFixed(3)} detail={`Load case ${result.loadCase ?? "—"} · Surface ${result.surface ?? "—"}`} />}
-        {result.pressure !== undefined && <ResultCard title="External wind pressure" value={`${result.pressure.toFixed(3)} kPa`} detail="Approved Agent #2 engine output" />}
+        {result.pressure !== undefined && <ResultCard title="External wind pressure" value={`${result.pressure.toFixed(3)} kPa`} detail="External pressure only · Beta" />}
       </div>
     );
   }
@@ -76,9 +79,11 @@ export function WindResults({ result, terrain }: { result: CalculationResult; te
 
   return (
     <div className="results-grid">
+      <ResultCard title="Gust pressure coefficient CgCp" value={result.cgcp.toFixed(3)} detail={`Zone ${result.zone} · ${result.source}`} />
       <ResultCard title="Actual component area" value={`${result.actual_area.toFixed(2)} ${result.unit}`} />
       <ResultCard title="Lookup area" value={`${result.lookup_area.toFixed(2)} ${result.unit}`} />
       <ResultCard title="Maximum table area" value={`${result.maximum_table_area.toFixed(2)} ${result.unit}`} />
     </div>
   );
 }
+

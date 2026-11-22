@@ -1,6 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, useRef } from "react";
+import LoadWorkspace,{DraftReport} from "./LoadWorkspace";
+import ParameterHelp from "./ParameterHelp";
+import InputGuide from "./InputGuide";
 import { EngineeringNotice } from "./EngineeringNotice";
 import { Field } from "./Field";
 import { ApiError, apiRequest } from "../lib/api";
@@ -92,6 +95,9 @@ const ccZones = [
 ] as const;
 
 export function WindCalculator() {
+  const revision=useRef(0);
+  const [reportInputs,setReportInputs]=useState<Record<string,unknown>|null>(null);
+  function invalidate(){++revision.current;setResult(null);setReportInputs(null);setError("");setLoading(false);}
   const [route, setRoute] = useState<Route>("WIND-LR");
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [error, setError] = useState("");
@@ -132,12 +138,11 @@ export function WindCalculator() {
   const [ccZone, setCcZone] = useState<string>("-C");
 
   function changeRoute(next: Route) {
-    setResult(null);
-    setError("");
+    invalidate();
     setRoute(next);
   }
 
-  async function runLowRise(): Promise<void> {
+  async function runLowRise(rev:number): Promise<void> {
     const applicability = await apiRequest<LowRiseApplicability>(
       "/api/v1/calculations/low-rise/applicability",
       {
@@ -153,7 +158,7 @@ export function WindCalculator() {
     );
 
     if (!applicability.applicable) {
-      setResult({ route: "WIND-LR", applicability });
+      if(rev===revision.current)setResult({ route: "WIND-LR", applicability });
       return;
     }
 
@@ -193,7 +198,7 @@ export function WindCalculator() {
       },
     );
 
-    setResult({
+    if(rev===revision.current)setResult({
       route: "WIND-LR",
       applicability,
       exposureFactor: exposure.exposure_factor,
@@ -204,7 +209,7 @@ export function WindCalculator() {
     });
   }
 
-  async function runGeneralStatic(): Promise<void> {
+  async function runGeneralStatic(rev:number): Promise<void> {
     const data = await apiRequest<GeneralStaticRunResponse>(
       "/api/v1/calculations/general-static/run",
       {
@@ -222,10 +227,10 @@ export function WindCalculator() {
       },
     );
 
-    setResult({ route: "WIND-GS", data });
+    if(rev===revision.current)setResult({ route: "WIND-GS", data });
   }
 
-  async function runComponents(): Promise<void> {
+  async function runComponents(rev:number): Promise<void> {
     const lookup = await apiRequest<ComponentsLookupResponse>(
       "/api/v1/lookups/components-cladding/low-slope-roof/cgcp",
       {
@@ -241,27 +246,30 @@ export function WindCalculator() {
       route: "WIND-CC",
       ...lookup,
     };
-    setResult(componentsResult);
+    if(rev===revision.current)setResult(componentsResult);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const rev=++revision.current;
+    const snapshot=route==="WIND-CC"?{route,component_area_m2:componentArea,cc_zone:ccZone}:{route,code_edition:codeEdition,height_m:height,wind_parallel_dimension_m:windDimension,terrain,importance_factor_Iw:importanceFactor,reference_pressure_q_kPa:q,climate_station:station,...(route==="WIND-LR"?{plan_B_m:planB,plan_W_m:planW,roof_slope_degrees:roofSlope,load_case:loadCase,surface,Ch:ch}:{Ct:codeEdition==="NBC_2010"?"1 (effective)":ct,pressure_application:application})};
     setLoading(true);
     setResult(null);
     setError("");
 
     try {
       if (route === "WIND-LR") {
-        await runLowRise();
+        await runLowRise(rev);
       } else if (route === "WIND-GS") {
-        await runGeneralStatic();
+        await runGeneralStatic(rev);
       } else {
-        await runComponents();
+        await runComponents(rev);
       }
+      if(rev===revision.current)setReportInputs(snapshot);
     } catch (err) {
-      setError(errorMessage(err));
+      if(rev===revision.current)setError(errorMessage(err));
     } finally {
-      setLoading(false);
+      if(rev===revision.current)setLoading(false);
     }
   }
 
@@ -273,7 +281,7 @@ export function WindCalculator() {
     options: readonly (readonly [string, string])[],
   ) => (
     <label className="field" htmlFor={id}>
-      <span className="field-label">{label}</span>
+      <span className="field-label">{label}<ParameterHelp label={label} text={id==="surface"?"Match the numbered wall/roof region and E variant from the selected edition’s low-building pressure figure for Load Case A or B. E is an edge-region identifier, not east. The geometry sketch does not assign surface numbers.":id==="terrain"?"Choose open or rough terrain from the upwind exposure. Ce is calculated from terrain and height; review terrain transitions separately.":id==="loadCase"?"A and B are separate code loading arrangements. Review the adopted code figure and repeat each required wind orientation.":id==="ccZone"?"Match this coefficient ID to the adopted code’s component/cladding zone and pressure sign. A coefficient is not a completed net pressure calculation.":id==="application"?"Select the pressure application defined by the general-static method. The engine selects its applicable coefficients.":"Select the project-specific option for the adopted code edition. The Illustrated guide explains its source and effect on the calculation."}/></span>
       <span className="field-control">
         <select
           id={id}
@@ -297,15 +305,13 @@ export function WindCalculator() {
           <span className="eyebrow">Wind loads · Beta</span>
           <h1>Wind Calculator</h1>
           <p>
-            Engineering calculations and approved workbook lookups are
-            performed through the FastAPI / Agent #2 engine.
+            Select the design route, enter the project inputs and review signed wind pressures. Open the illustrated guide for parameter definitions and surface selection.
           </p>
         </div>
         <span className="status-pill">SI Units</span>
       </header>
 
-      <section className="workspace">
-        <nav className="route-tabs" aria-label="Calculation route">
+      <LoadWorkspace input={<>        <nav className="route-tabs" aria-label="Calculation route">
           {(["WIND-LR", "WIND-GS", "WIND-CC"] as Route[]).map((item) => (
             <button
               key={item}
@@ -318,7 +324,6 @@ export function WindCalculator() {
           ))}
         </nav>
 
-        <div className="panel-grid">
           <section className="panel">
             <span className="eyebrow">Engineering inputs</span>
             <h2>
@@ -329,7 +334,7 @@ export function WindCalculator() {
                   : "Components & Cladding Lookup"}
             </h2>
 
-            <form onSubmit={submit}>
+            <form onSubmit={submit} onChange={invalidate}>
               {route !== "WIND-CC" && (
                 <>
                   <Field
@@ -558,7 +563,7 @@ export function WindCalculator() {
             </form>
           </section>
 
-          <section className="panel results-panel">
+</>} results={          <section className="panel results-panel">
             <span className="eyebrow">Calculation results</span>
             <h2>Results</h2>
             {error && (
@@ -571,9 +576,7 @@ export function WindCalculator() {
               </div>
             )}
             {result && <WindResults result={result} terrain={terrain} />}
-          </section>
-        </div>
-      </section>
+          </section>} report={<DraftReport title="Wind load calculation" inputs={reportInputs} result={result} formula={route==="WIND-LR"?"pₑ = Iw · q · Ce · (CgCp) · Ch · external pressure only":route==="WIND-GS"?"p = Iw · q · Ce · Ct · Cg · Cp":"C&C coefficient lookup · no net design pressure"}/>} guide={<InputGuide/>}/>
     </>
   );
 }
